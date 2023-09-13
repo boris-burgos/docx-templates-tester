@@ -7,48 +7,30 @@ type Props = {
     text: string,
 }
 
-
 type TemplateState = {
     file?: FileList | null,
     json: string,
 }
 
 const actionButton = (state: TemplateState) => {
-
     if(state.file && state.file.length > 0) {
         //window.alert(state.file[0] || "No hay archivo")
     } else {
         window.alert("No hay FileList")
     }
 
-
-
-
     if(state.file && state.file.length > 0 && state.file[0]) {
-        pruebaTemplate(state.file[0])
+        pruebaTemplate(state.file[0], state.json)
     }
-
-
 }
 
-const pruebaTemplate = async (file: File) => {
-
-    window.alert(await processTemplate(file))
-
-
+const pruebaTemplate = async (file: File, data: string) => {
+    await processTemplate(file, data)
 }
-
-
-
-
-
 
 const Controls = ({ text }: Props) => {
-
     const templateState: TemplateState = {json: text}
-
     const [state, setState] = useState(templateState);
-
 
     return (
         <>
