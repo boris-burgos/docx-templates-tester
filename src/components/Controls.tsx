@@ -1,5 +1,4 @@
-import React, {MouseEventHandler, useState} from 'react'
-
+import {MouseEventHandler, useState} from 'react'
 import processTemplate from "../process-template";
 
 type Props = {
@@ -10,10 +9,11 @@ type Props = {
 type TemplateState = {
     file?: FileList | null,
     json: string,
+    url?: string | null
 }
 
-const pruebaTemplate = async (file: File, data: string) => {
-    await processTemplate(file, data)
+const pruebaTemplate = async (file: File, data: string, url: string) => {
+    await processTemplate(file, data, url)
 }
 
 const Controls = ({ text }: Props) => {
@@ -32,8 +32,8 @@ const Controls = ({ text }: Props) => {
                 window.alert("No se ha seleccionado un archivo")
             }
         
-            if(state.file && state.file.length > 0 && state.file[0]) {
-                pruebaTemplate(state.file[0], state.json)
+            if(state.file && state.file.length > 0 && state.file[0] && state.url) {
+                pruebaTemplate(state.file[0], state.json, state.url)
             }
         } catch {
             setError(true)
@@ -43,13 +43,25 @@ const Controls = ({ text }: Props) => {
     return (
         <>
             <div style={{ height: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <input
-                    type='file'
-                    id='template'
-                    name='template'
-                    accept='*'
-                    onChange={e => setState({...state, file: e.target.files})}
-                />
+                <div style={{ display: 'flex', flexFlow: 'column', gap: 10 }}>
+                    <input
+                        type='file'
+                        id='template'
+                        name='template'
+                        accept='*'
+                        onChange={e => setState({...state, file: e.target.files})}
+                    />
+                    <div>
+                        <span style={{ marginRight: 4 }}>URL de la api</span>
+                    <input
+                        type='text'
+                        id='url'
+                        name='url'
+                        accept='*'
+                        onChange={e => setState({...state, url: e.target.value})}
+                    />
+                    </div>
+                </div>
                 <textarea
                     name="textValue"
                     value={state["json"]}

@@ -30,22 +30,132 @@ const readFileIntoArrayBuffer = (fd: File): Promise<string | null | ArrayBuffer>
         reader.readAsArrayBuffer(fd);
     });
 
-const processTemplate = async (file: File, data: string) => {
+enum DateFormat {
+    DATE = 1,
+    TIME = 2,
+    DATE_TIME = 3
+}
+
+const FORMATS: Record<number, Intl.DateTimeFormatOptions> = {
+    [DateFormat.DATE]: { year: 'numeric', month: '2-digit', day: '2-digit' },
+    [DateFormat.TIME]: { hour: '2-digit', minute: '2-digit' },
+    [DateFormat.DATE_TIME]: { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }
+}
+
+function formatDate(date: string | Date | null | undefined, locale?: string, format?: DateFormat) {
+    if (date !== '') {
+        const value = typeof date === 'string' ? new Date(date) : date
+        if (value != null) {
+        return value.toLocaleString(locale || 'es', FORMATS[format || DateFormat.DATE])
+        }
+    } else {
+        return ''
+    }
+}
+
+const getImageBase64 = (blob: Blob) => {
+    return new Promise<string | ArrayBuffer | null>(resolve => {
+        const reader = new FileReader()
+        reader.readAsDataURL(blob)
+        reader.onload = function () {
+        const result = reader.result as string
+        if (reader.result) {
+            // delete buffer header (extension and other info)
+            const index = result.indexOf(',')
+
+            resolve(result.substring(index + 1))
+        }
+        }
+    })
+}
+
+type Media = {
+    id: string
+    createdAt: Date
+    updatedAt: Date
+    mediaType: number
+    name: string
+    mimeType: string
+    institutionId: string | null
+}
+
+enum MediaType {
+    AVATAR = 1,
+    SCORE = 2
+}
+
+const PUBLIC_MEDIA_TYPES = [MediaType.AVATAR]
+
+function getMediaUrl(media: Media, url: string) {
+    if (PUBLIC_MEDIA_TYPES.includes(media.mediaType)) {
+        return `${url}/api/assets/media/public/${media.id}/${media.name}`
+    }
+
+    return `/api/assets/media/${media.id}/${media.name}`
+}
+
+const getMediaImageData = async (media: Media, url: string) => {
+    const mediaUrl = getMediaUrl(media, url)
+    const response = await fetch(mediaUrl)
+
+    const imageBlob = await response.blob()
+    const image = await getImageBase64(imageBlob)
+
+    return image
+}
+
+type ImageProperties = {
+    width: number
+    height: number
+    extension: string
+    thumbnail?: {
+        data: string | ArrayBuffer
+        extension: string
+    }
+    alt?: string
+    rotation?: number
+    caption?: string
+}
+
+const processTemplate = async (file: File, data: string, url: string) => {
     const template: string | null | ArrayBuffer = await readFileIntoArrayBuffer(file);
+    const locale = 'es'
 
-    const report = await createReport({
-        template: template as Buffer,
-        cmdDelimiter: ['{{', '}}'],
-        data: JSON.parse(data)
-    });
+    try {
+        const report = await createReport({
+            template: template as Buffer,
+            cmdDelimiter: ['{{', '}}'],
+            additionalJsContext: {
+            getImage: async (media: Media, properties: ImageProperties) => {
+                const image = await getMediaImageData(media, url)
+    
+                return { ...properties, data: image }
+            },
+            getDate: (date: string) => {
+                return formatDate(date, locale)
+            },
+            getTime: (date: string) => {
+                return formatDate(date, locale, DateFormat.TIME)
+            },
+            getDateTime: (date: string) => {
+                return formatDate(date, locale, DateFormat.DATE_TIME)
+            }
+            },
+            data: JSON.parse(data)
+        });
 
-    saveDataToFile(
-        report,
-        'report.docx',
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-    );
 
-    return template;
+        saveDataToFile(
+            report,
+            'report.docx',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        );
+
+        return template;
+
+    } catch (e){
+        alert(e)
+    }
 }
 
 export default processTemplate;
