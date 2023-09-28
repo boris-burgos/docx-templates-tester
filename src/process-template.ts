@@ -139,7 +139,10 @@ const processTemplate = async (file: File, data: string, url: string) => {
             },
             getDateTime: (date: string) => {
                 return formatDate(date, locale, DateFormat.DATE_TIME)
-            }
+            },
+            getInstrument: (code: string) => {
+                return `Instrument ${code}`
+            },
             },
             data: JSON.parse(data)
         });
