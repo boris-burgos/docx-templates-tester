@@ -150,12 +150,8 @@ const processTemplate = async (file: File, data: string, url: string) => {
                 return `Instrument ${code}`
             },
             getRepresentationServices: (services: Record<string, any>[]) => {
-                return services.map(service => {
-                    if (service.type === ServiceType.REPRESENTATION) {
-                        return service
-                    }
-                })
-                }
+                return services.filter(service => Object.values(ServiceType).includes(service.type))
+            }
             },
             data: JSON.parse(data)
         });
