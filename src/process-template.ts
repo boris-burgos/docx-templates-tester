@@ -117,6 +117,12 @@ type ImageProperties = {
     caption?: string
 }
 
+enum ServiceType {
+    CONCERT = 10,
+    REPRESENTATION = 11,
+    INSTITUTIONAL_ACT = 12
+}
+
 const processTemplate = async (file: File, data: string, url: string) => {
     const template: string | null | ArrayBuffer = await readFileIntoArrayBuffer(file);
     const locale = 'es'
@@ -143,6 +149,13 @@ const processTemplate = async (file: File, data: string, url: string) => {
             getInstrument: (code: string) => {
                 return `Instrument ${code}`
             },
+            getRepresentationServices: (services: Record<string, any>[]) => {
+                return services.map(service => {
+                    if (service.type === ServiceType.REPRESENTATION) {
+                        return service
+                    }
+                })
+                }
             },
             data: JSON.parse(data)
         });
