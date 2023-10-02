@@ -123,6 +123,8 @@ enum ServiceType {
     INSTITUTIONAL_ACT = 12
 }
 
+export const PERFORMANCE_TYPES = [ServiceType.CONCERT, ServiceType.REPRESENTATION, ServiceType.INSTITUTIONAL_ACT]
+
 const processTemplate = async (file: File, data: string, url: string) => {
     const template: string | null | ArrayBuffer = await readFileIntoArrayBuffer(file);
     const locale = 'es'
@@ -150,7 +152,7 @@ const processTemplate = async (file: File, data: string, url: string) => {
                 return `Instrument ${code}`
             },
             getRepresentationServices: (services: Record<string, any>[]) => {
-                return services.filter(service => Object.values(ServiceType).includes(service.type))
+                return services.filter(service => Object.values(PERFORMANCE_TYPES).includes(service.type))
             }
             },
             data: JSON.parse(data)
