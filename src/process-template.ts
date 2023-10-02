@@ -152,7 +152,7 @@ const processTemplate = async (file: File, data: string, url: string) => {
                 return `Instrument ${code}`
             },
             getRepresentationServices: (services: Record<string, any>[]) => {
-                return services.filter(service => Object.values(PERFORMANCE_TYPES).includes(service.type))
+                return services.filter(service => PERFORMANCE_TYPES.includes(service.type))
             }
             },
             data: JSON.parse(data)
