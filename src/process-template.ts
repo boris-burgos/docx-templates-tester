@@ -42,16 +42,37 @@ const FORMATS: Record<number, Intl.DateTimeFormatOptions> = {
     [DateFormat.DATE_TIME]: { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }
 }
 
-function formatDate(date: string | Date | null | undefined, locale?: string, format?: DateFormat) {
-    if (date !== '') {
-        const value = typeof date === 'string' ? new Date(date) : date
-        if (value != null) {
-        return value.toLocaleString(locale || 'es', FORMATS[format || DateFormat.DATE])
-        }
-    } else {
-        return ''
-    }
+export function isValidDate(d: any): boolean {
+    return d instanceof Date && !isNaN(d.getTime())
 }
+  
+export function getValidDate(d: any): Date | null {
+    if (isValidDate(d)) {
+        return d
+    } else if (typeof d === 'string') {
+        const date = new Date(d)
+        if (isValidDate(date)) {
+        return date
+        }
+    }
+
+    return null
+}
+
+export function formatDate(date: string | Date | null | undefined, locale?: string, format?: DateFormat, tz?: string) {
+    const d = getValidDate(date)
+    const options: Intl.DateTimeFormatOptions = { ...FORMATS[format || DateFormat.DATE] }
+  
+    if (tz) {
+      options.timeZone = tz
+    }
+  
+    if (d != null) {
+      return d.toLocaleString(locale || 'es', options)
+    } else {
+      return ''
+    }
+  }
 
 const getImageBase64 = (blob: Blob) => {
     return new Promise<string | ArrayBuffer | null>(resolve => {
@@ -86,23 +107,37 @@ enum MediaType {
 
 const PUBLIC_MEDIA_TYPES = [MediaType.AVATAR]
 
-function getMediaUrl(media: Media, url: string) {
+function getMediaUrlParams(params?: MediaUrlParams) {
+    if (params?.resize?.size) {
+      return `?r=${params.resize.size.w}x${params.resize.size.h}`
+    } else if (params?.resize?.proportions) {
+      return `?p=${params.resize.proportions.w}x${params.resize.proportions.h}`
+    }
+  
+    return ''
+}
+
+function getMediaUrl(media: Media, url: string, params?: MediaUrlParams) {
     if (PUBLIC_MEDIA_TYPES.includes(media.mediaType)) {
-        return `${url}/api/assets/media/public/${media.id}/${media.name}`
+        return `${url}/api/assets/media/public/${media.id}/${media.name}${getMediaUrlParams(params)}`
     }
 
-    return `/api/assets/media/${media.id}/${media.name}`
+    return `/api/assets/media/${media.id}/${media.name}${getMediaUrlParams(params)}`
 }
+export interface MediaUrlParams {
+    resize?: {
+      proportions?: { w: number; h: number }
+      size?: { w: number; h: number }
+    }
+  }
 
-const getMediaImageData = async (media: Media, url: string) => {
-    const mediaUrl = getMediaUrl(media, url)
+const getMediaImageData = async (media: Media, url: string, params?: MediaUrlParams, ) => {
+    const mediaUrl = getMediaUrl(media, url, params)
     const response = await fetch(mediaUrl)
-
     const imageBlob = await response.blob()
-    const image = await getImageBase64(imageBlob)
-
-    return image
-}
+  
+    return await getImageBase64(imageBlob)
+  }
 
 type ImageProperties = {
     width: number
@@ -125,7 +160,7 @@ enum ServiceType {
 
 export const PERFORMANCE_TYPES = [ServiceType.CONCERT, ServiceType.REPRESENTATION, ServiceType.INSTITUTIONAL_ACT]
 
-const processTemplate = async (file: File, data: string, url: string) => {
+const processTemplate = async (file: File, data: string, url: string, tz?: string) => {
     const template: string | null | ArrayBuffer = await readFileIntoArrayBuffer(file);
     const locale = 'es'
 
@@ -134,19 +169,28 @@ const processTemplate = async (file: File, data: string, url: string) => {
             template: template as Buffer,
             cmdDelimiter: ['{{', '}}'],
             additionalJsContext: {
-            getImage: async (media: Media, properties: ImageProperties) => {
-                const image = await getMediaImageData(media, url)
-    
-                return { ...properties, data: image }
-            },
+                getImage: async (media: Media, props: ImageProperties) => {
+                    const image = await getMediaImageData(media, url, {
+                      resize: { proportions: { w: props.width, h: props.height } }
+                    })
+                    const extension = '.png'
+                    // Resized images are always png
+                    /*
+                  if (media.mimeType) {
+                      extension = `.${media.mimeType.split('/').pop() || 'png'}`
+                    }
+                  */
+      
+                    return { ...props, data: image, extension }
+                  },
             getDate: (date: string) => {
-                return formatDate(date, locale)
+                return formatDate(date, locale, DateFormat.DATE, tz)
             },
             getTime: (date: string) => {
-                return formatDate(date, locale, DateFormat.TIME)
+                return formatDate(date, locale, DateFormat.TIME, tz)
             },
             getDateTime: (date: string) => {
-                return formatDate(date, locale, DateFormat.DATE_TIME)
+                return formatDate(date, locale, DateFormat.DATE_TIME, tz)
             },
             getInstrument: (code: string) => {
                 return `Instrument ${code}`
