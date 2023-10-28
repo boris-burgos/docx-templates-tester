@@ -9,11 +9,12 @@ type Props = {
 type TemplateState = {
     file?: FileList | null,
     json: string,
-    url?: string | null
+    url?: string | null,
+    tz?: string
 }
 
-const pruebaTemplate = async (file: File, data: string, url: string) => {
-    await processTemplate(file, data, url)
+const pruebaTemplate = async (file: File, data: string, url: string, tz?: string) => {
+    await processTemplate(file, data, url, tz)
 }
 
 const Controls = ({ text }: Props) => {
@@ -33,7 +34,7 @@ const Controls = ({ text }: Props) => {
             }
         
             if(state.file && state.file.length > 0 && state.file[0] && state.url) {
-                pruebaTemplate(state.file[0], state.json, state.url)
+                pruebaTemplate(state.file[0], state.json, state.url, state.tz)
             }
         } catch {
             setError(true)
@@ -59,6 +60,16 @@ const Controls = ({ text }: Props) => {
                         name='url'
                         accept='*'
                         onChange={e => setState({...state, url: e.target.value})}
+                    />
+                    </div>
+                    <div>
+                        <span style={{ marginRight: 4 }}>TimeZone</span>
+                    <input
+                        type='text'
+                        id='tz'
+                        name='tz'
+                        accept='*'
+                        onChange={e => setState({...state, tz: e.target.value})}
                     />
                     </div>
                 </div>
